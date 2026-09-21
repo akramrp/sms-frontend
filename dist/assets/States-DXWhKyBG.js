@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-CfuWmoMz.js";e();var n=t();function r(){return(0,n.jsx)(`div`,{children:`States`})}export{r as default};
