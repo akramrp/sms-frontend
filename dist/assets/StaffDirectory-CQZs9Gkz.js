@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-HFhCPKiE.js";import{c as t,o as n}from"./hrConfigs-BT_GD4OG.js";import{ct as r}from"./index-D1xJ0w6I.js";var i=e();function a(){let e=r();return(0,i.jsx)(t,{config:n,onAdd:()=>e(`/hr/staff-directory/add`),onEdit:t=>e(`/hr/staff-directory/edit/${t.id}`,{state:{record:t}})})}export{a as default};

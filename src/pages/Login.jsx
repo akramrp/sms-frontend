@@ -6,6 +6,7 @@ import { Form, Input, notification } from "antd";
 import UserContext from "../context/UserContext";
 import axios from "axios";
 import Logo from "../assets/images/login.svg";
+import { departmentListAPI, designationListAPI } from "../services/apis";
 
 const Login = () => {
   const [form] = Form.useForm();
@@ -22,6 +23,9 @@ const Login = () => {
         LS_SERVICE.set("fullname", `${userData.user?.first_name || ''} ${userData.user?.middle_name || ''} ${userData.user?.last_name || ''}`);
         LS_SERVICE.set("role", userData.user.designation.name || 'User');
         setLoginUserData(userData.user);
+        getDepartmentList();
+        getDesignationList();
+        notification.success({ message: "Login", description: "Login successfully!" });
         navigate('/home');
       } else {
         notification.error({ message: "Login", description: "Invalid login credentials!" });
@@ -29,6 +33,24 @@ const Login = () => {
     } catch (err) {
       notification.error({ message: "Login", description: "Invalid login credentials!" });
       console.log("auth-login-err:", err);
+    }
+  };
+
+  const getDepartmentList = async () => {
+    let payloadData = { keyword: 'all' };
+    let apiResp = await departmentListAPI(payloadData);
+    if (apiResp?.data?.statusCode == 200) {
+      let apiList = apiResp.data.data || [];
+      LS_SERVICE.set("departmentList", apiList);
+    }
+  };
+
+  const getDesignationList = async () => {
+    let payloadData = { keyword: 'all' };
+    let apiResp = await designationListAPI(payloadData);
+    if (apiResp?.data?.statusCode == 200) {
+      let apiList = apiResp.data.data || [];
+      LS_SERVICE.set("designationList", apiList);
     }
   };
 

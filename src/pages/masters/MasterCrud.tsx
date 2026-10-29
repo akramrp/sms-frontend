@@ -14,8 +14,7 @@ import {
     designationStatusAPI,
     designationUpdateAPI,
 } from '../../services/apis';
-import './MasterCrud.css';
-
+import LS_SERVICE from '../../utils/localStorage';
 type MasterKind = 'department' | 'designation';
 type MasterRecord = { id: number; name?: string; code?: string; description?: string; is_active?: number | string };
 
@@ -58,6 +57,21 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
     const requestId = useRef(0);
     const searchRefDebounced = useRef<ReturnType<typeof debounce> | null>(null);
     const [form] = Form.useForm();
+
+    const refreshCachedRecords = async () => {
+        try {
+            const response = await config.list({ keyword: 'all' });
+            if (response?.data?.statusCode !== 200 || !Array.isArray(response.data.data)) {
+                throw new Error(response?.data?.message || `Unable to refresh ${config.title.toLowerCase()} cache.`);
+            }
+            LS_SERVICE.set(kind === 'department' ? 'departmentList' : 'designationList', response.data.data);
+        } catch (error: any) {
+            notification.error({
+                message: config.singular,
+                description: error?.response?.data?.message || error?.message || INVALID_MESSAGE,
+            });
+        }
+    };
 
     const loadRecords = useCallback(async (nextPage = 1, keyword = '') => {
         const currentRequest = ++requestId.current;
@@ -120,6 +134,7 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
                 notification.success({ message: config.singular, description: response.data.message });
                 setModalOpen(false);
                 await loadRecords(page, searchRef.current?.value.trim() || '');
+                await refreshCachedRecords();
             } else {
                 notification.error({ message: config.singular, description: response?.data?.message || INVALID_MESSAGE });
             }
@@ -130,13 +145,15 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
         }
     };
 
-    const toggleStatus = async (id: number) => {
+    const toggleStatus = async (id: number, status: number) => {
         try {
-            const response = await config.status(id);
-            if (response?.data?.statusCode === 200) 
+            const response = await config.status(id, status);
+            if (response?.data?.statusCode === 200) {
                 await loadRecords(page, searchRef.current?.value.trim() || '');
-            else 
+                await refreshCachedRecords();
+            } else {
                 notification.error({ message: config.singular, description: response?.data?.message || INVALID_MESSAGE });
+            }
         } catch (error: any) {
             notification.error({ message: config.singular, description: error?.response?.data?.message || INVALID_MESSAGE });
         }
@@ -150,6 +167,7 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
                 notification.success({ message: config.singular, description: response.data.message });
                 setDeleteTarget(null);
                 await loadRecords(page, searchRef.current?.value.trim() || '');
+                await refreshCachedRecords();
             } else notification.error({ message: config.singular, description: response?.data?.message || INVALID_MESSAGE });
         } catch (error: any) {
             notification.error({ message: config.singular, description: error?.response?.data?.message || INVALID_MESSAGE });
@@ -159,13 +177,27 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
     return (
         <main className="app-main master-page">
             <div className="container-fluid">
-                <section className="master-card">
-                    <header className="master-toolbar">
-                        <div className="master-title"><span className="master-title-icon"><i className={`bi ${config.icon}`} /></span><span><strong>{config.title}</strong><small>Manage {config.title.toLowerCase()} and access data</small></span></div>
-                        <div className="master-actions">
-                            <div className="master-search"><i className="bi bi-search" /><input ref={searchRef} placeholder={`Search ${config.title.toLowerCase()}`} onKeyDown={(event) => event.key === 'Enter' && search()} /><button type="button" onClick={search} aria-label="Search"><i className="bi bi-arrow-right" /></button></div>
-                            <button type="button" className="master-reset" onClick={resetSearch} title="Reset search"><i className="bi bi-arrow-counterclockwise" /></button>
-                            <button type="button" className="btn btn-sm master-create" onClick={openCreate}><i className="bi bi-plus-lg" /> New {config.singular}</button>
+                <section className="card sms-card">
+                    <header className="card-header sms-toolbar">
+                        <div className="sms-toolbar-row">
+                            <div className="master-title"><span className="master-title-icon"><i className={`bi ${config.icon}`} /></span><span><strong>{config.title}</strong><small>Manage {config.title.toLowerCase()} and access data</small></span></div>
+                            <div className="sms-toolbar-controls">
+                                <div className="input-group input-group-sm sms-search">
+                                    <input
+                                        type="search"
+                                        ref={searchRef}
+                                        className="form-control"
+                                        placeholder={`Search ${config.title.toLowerCase()}`}
+                                        aria-label={`Search ${config.title.toLowerCase()}`}
+                                        onKeyDown={(event) => event.key === 'Enter' && search()}
+                                    />
+                                    <button type="button" className="input-group-text" onClick={search} aria-label={`Search ${config.title.toLowerCase()}`}>
+                                        <i className="bi bi-search" />
+                                    </button>
+                                </div>
+                                <button type="button" className="btn btn-sm sms-reset-search" onClick={resetSearch} title="Reset search" aria-label="Reset search"><i className="bi bi-arrow-counterclockwise" /></button>
+                                <button type="button" className="btn btn-sm btn-outline-success" onClick={openCreate}><i className="bi bi-plus-lg" /> New {config.singular}</button>
+                            </div>
                         </div>
                     </header>
                     <div className="table-responsive">
@@ -187,14 +219,14 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
                                         <td className="master-name">{record.name || '-'}</td>
                                         <td>{record.code || '-'}</td>
                                         <td>{record.about || '-'}</td>
-                                        <td><Switch size="small" checked={record.is_active == 1 || record.is_active === '1'} onChange={() => toggleStatus(record.id)} /></td>
+                                        <td><Switch size="small" checked={record.is_active == 1 || record.is_active === '1'} onChange={() => toggleStatus(record.id, record.is_active == 1 ? 0 : 1)} /></td>
                                         <td className="text-end"><div className="master-row-actions"><button type="button" onClick={() => openEdit(record)} title="Edit"><i className="bi bi-pencil" /></button><button type="button" className="danger" onClick={() => setDeleteTarget(record)} title="Delete"><i className="bi bi-trash" /></button></div></td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <footer className="master-footer"><span><i className="bi bi-list-ul" /> <strong>{pagination.totalRecords ?? records.length}</strong> total records</span><Pagination size="small" current={page} pageSize={pagination.perPage || 10} total={pagination.totalRecords || records.length} onChange={(nextPage) => loadRecords(nextPage, searchRef.current?.value.trim() || '')} /></footer>
+                    <footer className="sms-pagination-footer"><span className="sms-record-count"><i className="bi bi-list-ul" /> <strong>{pagination.totalRecords ?? records.length}</strong> total records</span><Pagination size="small" current={page} pageSize={pagination.perPage || 10} total={pagination.totalRecords || records.length} onChange={(nextPage) => loadRecords(nextPage, searchRef.current?.value.trim() || '')} /></footer>
                 </section>
             </div>
             <Modal centered open={modalOpen} onCancel={() => setModalOpen(false)} destroyOnHidden footer={null} title={`${editing ? 'Edit' : 'Create'} ${config.singular}`}>
@@ -207,7 +239,7 @@ export default function MasterCrud({ kind }: { kind: MasterKind }) {
                         </Form.Item></div>
                     </div>
                     <Form.Item name="about" label="About"><Input.TextArea rows={3} /></Form.Item>
-                    <div className="master-form-actions"><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="btn btn-sm master-create" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Create'}</button></div>
+                    <div className="master-form-actions"><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setModalOpen(false)}>Cancel</button>                    <button type="submit" className="btn btn-sm btn-outline-success" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Create'}</button></div>
                 </Form>
             </Modal>
             <Modal centered open={Boolean(deleteTarget)} onCancel={() => setDeleteTarget(null)} destroyOnHidden footer={null} title="Delete record">

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import LS_SERVICE from "../../utils/localStorage";
-import helpers from "../../services/helpers";
+import { formatCurrentData } from "../../constants";
 import { sidebarMenus } from "./sidebar/sidebar.config";
 import type { SidebarMenuItem } from "./sidebar/sidebar.config";
-const { formatCurrentData } = helpers;
 
 const HeaderMenuItem = ({ item }: { item: SidebarMenuItem }) => {
     const [open, setOpen] = useState(false);

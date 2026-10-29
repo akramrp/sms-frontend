@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import debounce from 'lodash/debounce';
-import helpers from '../../services/helpers';
 import { downloadExcel } from 'react-export-table-to-excel';
 import Loader from "../../assets/img/loader.gif"
-import { COLOR_BGFN, INVALID_MESSAGE } from '../../constants';
+import { COLOR_BGFN, getCityList as fetchCityList, getCountryList as fetchCountryList, INVALID_MESSAGE, titleCase } from '../../constants';
 import { Form, Input, Pagination, Select, Radio, notification, Modal } from 'antd';
-import { userListAPI, userSaveAPI, userUpdateAPI, userStatusAPI, userDeleteAPI, departmentListAPI, designationListAPI} from '../../services/apis';
+import { userListAPI, userSaveAPI, userUpdateAPI, userStatusAPI, userDeleteAPI } from '../../services/apis';
+import LS_SERVICE from '../../utils/localStorage';
 // import './Users.css';
 const { Option } = Select;
 
@@ -19,8 +19,8 @@ export default function Users() {
     const [formAction, setFormAction] = useState('View');
     const [editData, setEditData] = useState(null);
     const [pagination, setPagination] = useState({});
-    const [departmentList, setDepartmentList] = useState([]);
-    const [designationList, setDesignationList] = useState([]);
+    const [departmentList] = useState(() => LS_SERVICE.get('departmentList') || []);
+    const [designationList] = useState(() => LS_SERVICE.get('designationList') || []);
     const [countryList, setCountryList] = useState([]);
     const [stateList, setStateList] = useState([]);
     const [cityList, setCityList] = useState([]);
@@ -115,9 +115,7 @@ export default function Users() {
         setIsSubmitted(false);
         setAddModal(true);
         setEditData(data);
-        const [, , countries] = await Promise.all([
-            getDepartmentList(),
-            getDesignationList(),
+        const [countries] = await Promise.all([
             getCountryList(),
             getAllCity(data.state_id),
         ]);
@@ -152,11 +150,7 @@ export default function Users() {
         setFormMode('Create');
         setEditData(null);
         setAddModal(true);
-        await Promise.all([
-            getDepartmentList(),
-            getDesignationList(),
-            getCountryList(),
-        ]);
+        await getCountryList();
     }, []);
 
     const handleExportList = async () => {
@@ -172,7 +166,7 @@ export default function Users() {
                     let fullName = `${val?.first_name || ""} ${val?.middle_name || ""} ${val?.last_name || ""}`;
                     return {
                         emp_code: val.emp_code,
-                        name: helpers.titleCase(fullName),
+                        name: titleCase(fullName),
                         email: val.email,
                         mobile: val.mobile,
                         gender: val.gender,
@@ -211,58 +205,8 @@ export default function Users() {
         }
     }
 
-    const getDepartmentList = async () => {
-        try {
-            let payloadData = { keyword: 'all' };
-            let apiResp = await departmentListAPI(payloadData);
-            if (apiResp?.data?.statusCode == 200) {
-                let apiList = apiResp.data.data || [];
-                setDepartmentList(apiList);
-            }
-            else {
-                notification.error({
-                    message: 'Department',
-                    description: apiResp?.data?.message || INVALID_MESSAGE
-                });
-            }
-        } catch (err) {
-            if (err.response?.data) {
-                notification.error({
-                    message: 'Department',
-                    description: err.response?.data?.message || INVALID_MESSAGE
-                });
-            }
-            console.log('get-department-list-err:', err);
-        }
-    };
-
-    const getDesignationList = async () => {
-        try {
-            let payloadData = { keyword: 'all' };
-            let apiResp = await designationListAPI(payloadData);
-            if (apiResp?.data?.statusCode == 200) {
-                let apiList = apiResp.data.data || [];
-                setDesignationList(apiList);
-            }
-            else {
-                notification.error({
-                    message: 'Designation',
-                    description: apiResp?.data?.message || INVALID_MESSAGE
-                });
-            }
-        } catch (err) {
-            if (err.response?.data) {
-                notification.error({
-                    message: 'Designation',
-                    description: err.response?.data?.message || INVALID_MESSAGE
-                });
-            }
-            console.log('get-designation-list-err:', err);
-        }
-    };
-
     const getCountryList = async () => {
-        let apiList = await helpers.getCountryList();
+        let apiList = await fetchCountryList();
         setCountryList(apiList);
         return apiList;
     };
@@ -275,7 +219,7 @@ export default function Users() {
     }
 
     const getAllCity = async (state_id) => {
-        let list = await helpers.getCityList(state_id);
+        let list = await fetchCityList(state_id);
         setCityList(list);
     }
 
@@ -383,7 +327,7 @@ export default function Users() {
                                     <tr key={i}>
                                         <td>{activePage ? (((activePage - 1) * 10) + i + 1) : i + 1}</td>
                                         <td>{data.emp_code}</td>
-                                        <td>{helpers.titleCase(fullName)} {`(${data?.gender[0]})`}</td>
+                                        <td>{titleCase(fullName)} {`(${data?.gender[0]})`}</td>
                                         <td>{data.email}</td>
                                         <td>{data.mobile}</td>
                                         <td>{data.department.name || ""}</td>
@@ -399,7 +343,7 @@ export default function Users() {
                                                 </button>
                                                 <button type="button" className="btn btn-outline-danger sms-action sms-action-delete" 
                                                 aria-label="Delete" title="Delete user"
-                                                onClick={() => openDeleteModal(data.id, helpers.titleCase(fullName))}
+                                                onClick={() => openDeleteModal(data.id, titleCase(fullName))}
                                                 >
                                                     <i className="bi bi-trash" aria-hidden="true"></i>
                                                 </button>
@@ -440,7 +384,7 @@ export default function Users() {
                     <Form
                         layout="vertical"
                         autoComplete="off"
-                        className='emrfrm sms-modal-form'
+                        className='sms-modal-form'
                         ref={addFormRef}
                         onFinish={(e) => handleAddRecord(e)}
                         initialValues={{ remember: true }}

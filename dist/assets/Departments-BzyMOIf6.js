@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-HFhCPKiE.js";import{t}from"./MasterCrud-mJikIxat.js";var n=e();function r(){return(0,n.jsx)(t,{kind:`department`})}export{r as default};

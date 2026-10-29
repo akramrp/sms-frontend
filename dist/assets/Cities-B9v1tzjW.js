@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-HFhCPKiE.js";import{t}from"./react-DHd3-1ig.js";t();var n=e();function r(){return(0,n.jsx)(`div`,{children:`Cities`})}export{r as default};

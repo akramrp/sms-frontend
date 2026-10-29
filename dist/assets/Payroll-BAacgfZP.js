@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-HFhCPKiE.js";import{a as t,c as n}from"./hrConfigs-BT_GD4OG.js";var r=e();function i(){return(0,r.jsx)(n,{config:t})}export{i as default};

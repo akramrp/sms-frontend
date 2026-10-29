@@ -78,7 +78,7 @@ const TestingForm = () => {
                         layout='vertical'
                         colon={true}
                         onFinish={handleSubmit}
-                        className="mt-4 emrfrm"
+                        className="mt-4"
                         name="userForm"
                         initialValues={{ remember: true }}
                     // ref={routeFormRef}
